@@ -1,29 +1,46 @@
-APP:= no_entry
+TARGET_DEVICE = $(shell gcc -dumpmachine | cut -f1 -d -)
+CXX:= g++ -std=c++17
 
-CC:= g++
+SRCS:= lineoffire.cpp
 
-NVDS_VERSION:= 5.1
+INCS:= $(wildcard *.h)
+LIB:=libirisgst_lineoffire.so
 
-SRCS:= $(wildcard *.cpp)
+NVDS_VERSION:=5.1
 
-INCS:= $(wildcard *.hpp)
+CFLAGS+= -fPIC -DDS_VERSION=\"5.1.0\" \
+	 -I /usr/local/cuda/include \
+	 -I /opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/sources/includes
 
-PKGS:= gstreamer-1.0 gstreamer-base-1.0 gstreamer-video-1.0
+GST_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/gst-plugins/
+LIB_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/
 
-CFLAGS+= $(shell pkg-config --cflags $(PKGS))
-
-LIBS+= $(shell pkg-config --libs $(PKGS))
+LIBS := -shared -Wl,-no-undefined \
+		-L/usr/local/cuda/lib64/ -lcudart -ldl \
+		-lnppc -lnppig -lnpps -lnppicc -lnppidei \
+		-L$(LIB_INSTALL_DIR) -lnvdsgst_helper -lnvdsgst_meta -lnvds_meta -lnvbufsurface -lnvbufsurftransform \
+		-Wl,-rpath,$(LIB_INSTALL_DIR)
 
 OBJS:= $(SRCS:.cpp=.o)
 
-all: $(APP)
+PKGS:= gstreamer-1.0 gstreamer-base-1.0 gstreamer-video-1.0 opencv4
 
-%.o: %.cpp $(INCS) 
-	$(CC) -c $(CFLAGS) $< -o $@
+CFLAGS+=$(shell pkg-config --cflags $(PKGS))
+LIBS+=$(shell pkg-config --libs $(PKGS))
 
-$(APP): $(OBJS) Makefile
-	$(CC) $(OBJS) $(LIBS) -o $(APP)
+all: $(LIB)
+
+%.o: %.cpp $(INCS) Makefile
+	@echo $(CFLAGS)
+	$(CXX) -c -o $@ $(CFLAGS) $<
+
+$(LIB): $(OBJS) Makefile
+	@echo $(CFLAGS)
+	$(CXX) -o $@ $(OBJS) $(LIBS)
+
+
+install: $(LIB)
+	cp -rv $(LIB) $(GST_INSTALL_DIR)
 
 clean:
 	rm -rf $(OBJS) $(LIB)
-	rm $(APP)
