@@ -1,33 +1,17 @@
 /**
- * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
+ * @file gstdsexample2.cpp
+ * @author M JAYANTH VARMA (jayanthvaram134@gmail.com)
+ * @brief
+ * @version 1.0
+ * @date 2022-04-24
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * @copyright Copyright (c) 2022
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
  */
 
-#include <string.h>
-#include <string>
-#include <sstream>
 #include <iostream>
-#include <ostream>
-#include <fstream>
 #include "gstdsexample2.h"
-#include <sys/time.h>
+
 GST_DEBUG_CATEGORY_STATIC (gst_dsexample2_debug);
 #define GST_CAT_DEFAULT gst_dsexample2_debug
 #define USE_EGLIMAGE 1
@@ -46,30 +30,6 @@ enum
 /* Default values for properties */
 #define DEFAULT_UNIQUE_ID 15
 #define DEFAULT_GPU_ID 0
-
-#define RGB_BYTES_PER_PIXEL 3
-#define RGBA_BYTES_PER_PIXEL 4
-#define Y_BYTES_PER_PIXEL 1
-#define UV_BYTES_PER_PIXEL 2
-
-#define MIN_INPUT_OBJECT_WIDTH 16
-#define MIN_INPUT_OBJECT_HEIGHT 16
-
-#define CHECK_NPP_STATUS(npp_status,error_str) do { \
-  if ((npp_status) != NPP_SUCCESS) { \
-    g_print ("Error: %s in %s at line %d: NPP Error %d\n", \
-        error_str, __FILE__, __LINE__, npp_status); \
-    goto error; \
-  } \
-} while (0)
-
-#define CHECK_CUDA_STATUS(cuda_status,error_str) do { \
-  if ((cuda_status) != cudaSuccess) { \
-    g_print ("Error: %s in %s at line %d (%s)\n", \
-        error_str, __FILE__, __LINE__, cudaGetErrorName(cuda_status)); \
-    goto error; \
-  } \
-} while (0)
 
 /* By default NVIDIA Hardware allocated memory flows through the pipeline. We
  * will be processing on this type of memory only. */
@@ -106,12 +66,6 @@ static gboolean gst_dsexample2_stop (GstBaseTransform * btrans);
 
 static GstFlowReturn gst_dsexample2_transform_ip (GstBaseTransform *
     btrans, GstBuffer * inbuf);
-
-static void
-attach_metadata_full_frame (GstDsExample2 * dsexample2, NvDsFrameMeta *frame_meta,
-    gdouble scale_ratio, DsExample2Output * output, guint batch_id);
-static void attach_metadata_object (GstDsExample2 * dsexample2,
-    NvDsObjectMeta * obj_meta, DsExample2Output * output);
 
 /* Install properties, set sink and src pad capabilities, override the required
  * functions of the base class, These are common to all instances of the
@@ -168,8 +122,8 @@ gst_dsexample2_class_init (GstDsExample2Class * klass)
   gst_element_class_set_details_simple (gstelement_class,
       "DsExample2 plugin",
       "DsExample2 Plugin",
-      "Plugin to print metadata from nvinfer element",
-      "A useless plugin that just prints metadata from upstream element"
+      "Plugin to print metadata from upstream 'nvinfer' element",
+      "A stupid plugin that just prints metadata from upstream element"
       "M JAYANTH VARMA | jayanthvarma134@gmail.com");
 }
 
@@ -235,48 +189,7 @@ gst_dsexample2_get_property (GObject * object, guint prop_id,
 static gboolean
 gst_dsexample2_start (GstBaseTransform * btrans)
 {
-  GstDsExample2 *dsexample2 = GST_DSEXAMPLE2 (btrans);
-  NvBufSurfaceCreateParams create_params;
-  DsExample2InitParams init_params =
-      { dsexample2->frame_num, dsexample2->unique_id,
-    dsexample2->gpu_id
-  };
-
-  /* Algorithm specific initializations and resource allocation. */
-  dsexample2->dsexample2lib_ctx = DsExample2CtxInit (&init_params);
-
-  GST_DEBUG_OBJECT (dsexample2, "ctx lib %p \n", dsexample2->dsexample2lib_ctx);
-
-  CHECK_CUDA_STATUS (cudaSetDevice (dsexample2->gpu_id),
-      "Unable to set cuda device");
-
-  if (dsexample2->inter_buf)
-    NvBufSurfaceDestroy (dsexample2->inter_buf);
-  dsexample2->inter_buf = NULL;
-
-
-  /* An intermediate buffer for NV12/RGBA to BGR conversion  will be
-   * required. Can be skipped if custom algorithm can work directly on NV12/RGBA. */
-  create_params.gpuId  = dsexample2->gpu_id;
-  create_params.width  = 1920;
-  create_params.height = 1080;
-  create_params.size = 0;
-  create_params.colorFormat = NVBUF_COLOR_FORMAT_RGBA;
-  create_params.layout = NVBUF_LAYOUT_PITCH;
-
-  create_params.memType = NVBUF_MEM_CUDA_PINNED;
-
-  if (NvBufSurfaceCreate (&dsexample2->inter_buf, 1,
-          &create_params) != 0) {
-    GST_ERROR ("Error: Could not allocate internal buffer for dsexample2");
-    goto error;
-  }
-
   return TRUE;
-error:
-  if (dsexample2->dsexample2lib_ctx)
-    DsExample2CtxDeinit (dsexample2->dsexample2lib_ctx);
-  return FALSE;
 }
 
 /**
@@ -285,18 +198,6 @@ error:
 static gboolean
 gst_dsexample2_stop (GstBaseTransform * btrans)
 {
-  GstDsExample2 *dsexample2 = GST_DSEXAMPLE2 (btrans);
-
-  if (dsexample2->inter_buf)
-    NvBufSurfaceDestroy(dsexample2->inter_buf);
-  dsexample2->inter_buf = NULL;
-
-  /* Deinit the algorithm library */
-  DsExample2CtxDeinit (dsexample2->dsexample2lib_ctx);
-  dsexample2->dsexample2lib_ctx = NULL;
-
-  GST_DEBUG_OBJECT (dsexample2, "ctx lib released \n");
-
   return TRUE;
 }
 
@@ -330,14 +231,11 @@ gst_dsexample2_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
 {
   GstDsExample2 *dsexample2 = GST_DSEXAMPLE2 (btrans);
   GstFlowReturn flow_ret = GST_FLOW_ERROR;
-  DsExample2Output *output;
 
   NvDsBatchMeta *batch_meta = NULL;
   NvDsFrameMeta *frame_meta = NULL;
   NvDsMetaList * l_frame = NULL;
   guint i = 0;
-
-  dsexample2->frame_num++;
 
   batch_meta = gst_buffer_get_nvds_batch_meta (inbuf);
   if (batch_meta == nullptr) {
@@ -355,14 +253,18 @@ gst_dsexample2_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
       l_frame = l_frame->next)
     {
       frame_meta = (NvDsFrameMeta *) (l_frame->data);
-      cv::Mat in_mat;
+      int object_count = 0;
+
+      std::cout<< "******  ******"<<std::endl;
+      std::cout<< "[frame_num : " << frame_meta->frame_num<<" ]"<<std::endl;
 
       for (l_obj = frame_meta->obj_meta_list; l_obj != NULL;
           l_obj = l_obj->next)
       {
         obj_meta = (NvDsObjectMeta *) (l_obj->data);
-        std::cout<<"[Tracker ID] : " <<obj_meta->object_id<<std::endl;
+        object_count+= 1;
       }
+      std::cout<< "[objs_in_frame : "<<object_count <<" ]"<<std::endl;
 
     }
   flow_ret = GST_FLOW_OK;
@@ -387,4 +289,4 @@ dsexample2_plugin_init (GstPlugin * plugin)
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
     nvdsgst_dsexample2,
-    DESCRIPTION, dsexample2_plugin_init, "5.1", LICENSE, BINARY_PACKAGE, URL)
+    DESCRIPTION, dsexample2_plugin_init, "1.0", LICENSE, BINARY_PACKAGE, URL)
