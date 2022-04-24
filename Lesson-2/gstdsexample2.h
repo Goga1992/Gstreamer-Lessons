@@ -30,7 +30,7 @@
 #define PACKAGE "dsexample2"
 #define VERSION "1.0"
 #define LICENSE "Proprietary"
-#define DESCRIPTION "A useless plugin to print metadata from upstream nvinfer element."
+#define DESCRIPTION "A stupid plugin that just prints metadata from upstream 'nvinfer' element."
 #define BINARY_PACKAGE "Indie plugin"
 #define URL "https://github.com/jayanthvarma134"
 
