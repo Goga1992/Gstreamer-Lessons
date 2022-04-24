@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2022
  *
  */
-
+#include <iostream>
 #include "gstdsexample2.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_dsexample2_debug);
