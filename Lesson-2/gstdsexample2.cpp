@@ -9,7 +9,6 @@
  *
  */
 
-#include <iostream>
 #include "gstdsexample2.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_dsexample2_debug);
@@ -122,8 +121,7 @@ gst_dsexample2_class_init (GstDsExample2Class * klass)
   gst_element_class_set_details_simple (gstelement_class,
       "DsExample2 plugin",
       "DsExample2 Plugin",
-      "Plugin to print metadata from upstream 'nvinfer' element",
-      "A stupid plugin that just prints metadata from upstream element"
+      "A stupid plugin that just prints metadata from upstream 'nvinfer' element",
       "M JAYANTH VARMA | jayanthvarma134@gmail.com");
 }
 
