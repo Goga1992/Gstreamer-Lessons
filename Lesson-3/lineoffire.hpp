@@ -6,7 +6,7 @@
 #define VERSION "1.0"
 #define LICENSE "Proprietary"
 #define DESCRIPTION "Plugin for Line Of Fire usecase."
-#define BINARY_PACKAGE "NLine Of Fire plugin"
+#define BINARY_PACKAGE "Line Of Fire plugin"
 #define URL "https://github.com/jayanthvarma134/"
 
 
