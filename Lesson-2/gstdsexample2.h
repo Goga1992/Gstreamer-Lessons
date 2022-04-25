@@ -34,7 +34,6 @@
 #define BINARY_PACKAGE "Indie plugin"
 #define URL "https://github.com/jayanthvarma134"
 
-
 G_BEGIN_DECLS
 /* Standard boilerplate stuff */
 typedef struct _GstDsExample2 GstDsExample2;
